@@ -109,7 +109,7 @@ services:
 
   ## ReportPortal services
   index:
-    image: reportportal/service-index:${SERVICE_INDEX_TAG}
+    image: reportportal/service-index:5.11.0
     logging:
       <<: *logging
     depends_on:
