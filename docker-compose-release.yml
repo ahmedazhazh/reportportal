@@ -1,11 +1,8 @@
-version: "3.8"
 services:
 
   ## External dependencies
-
   gateway:
     image: traefik:v2.11.2
-    container_name: traefik
     logging: &logging
       driver: "json-file"
       options:
@@ -28,8 +25,7 @@ services:
     restart: always
 
   opensearch:
-    image: opensearchproject/opensearch:2.11.0
-    container_name: opensearch
+    image: opensearchproject/opensearch:2.14.0
     logging:
       <<: *logging
     environment:
@@ -52,10 +48,10 @@ services:
       test: ["CMD", "curl","-s" ,"-f", "http://0.0.0.0:9200/_cat/health"]
     networks:
       - reportportal
+    restart: always
 
   postgres:
     image: postgres:12.17-alpine3.17
-    container_name: postgres
     logging:
       <<: *logging
     shm_size: '512m'
@@ -88,8 +84,7 @@ services:
     restart: always
 
   rabbitmq:
-    image: bitnami/rabbitmq:3.12.2-debian-11-r8
-    container_name: rabbitmq
+    image: bitnami/rabbitmq:3.13.2
     logging:
       <<: *logging
     ## Expose RabbitMQ
@@ -99,6 +94,10 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: &rabbitmq_user rabbitmq
       RABBITMQ_DEFAULT_PASS: &rabbitmq_password rabbitmq
+      RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS: "true"
+      ## @env RABBITMQ_PLUGINS define RabbitMQ plugins to be enabled
+      ## rabbitmq_consistent_hash_exchange is required for the ReportPortal
+      RABBITMQ_PLUGINS: rabbitmq_consistent_hash_exchange, rabbitmq_management, rabbitmq_auth_backend_ldap
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 30s
@@ -109,10 +108,8 @@ services:
     restart: always
 
   ## ReportPortal services
-
   index:
-    image: reportportal/service-index:5.11.0
-    container_name: reportportal-index
+    image: reportportal/service-index:${SERVICE_INDEX_TAG}
     logging:
       <<: *logging
     depends_on:
@@ -138,8 +135,7 @@ services:
     restart: always
 
   ui:
-    image: reportportal/service-ui:${VERSION}
-    container_name: reportportal-ui
+    image: reportportal/service-ui:${SERVICE_UI_TAG}
     environment:
       RP_SERVER_PORT: "8080"
     healthcheck:
@@ -161,8 +157,7 @@ services:
     restart: always
 
   api:
-    image: reportportal/service-api:${VERSION}
-    container_name: reportportal-api
+    image: reportportal/service-api:${SERVICE_API_TAG}
     logging:
       <<: *logging
     depends_on:
@@ -230,8 +225,7 @@ services:
     restart: always
 
   uat:
-    image: reportportal/service-authorization:${VERSION}
-    container_name: reportportal-uat
+    image: reportportal/service-authorization:${SERVICE_AUTHORIZATION_TAG}
     logging:
       <<: *logging
     environment:
@@ -275,8 +269,7 @@ services:
     restart: always
 
   jobs:
-    image: reportportal/service-jobs:${VERSION}
-    container_name: reportportal-jobs
+    image: reportportal/service-jobs:${SERVICE_JOBS_TAG}
     logging:
       <<: *logging
     depends_on:
@@ -348,8 +341,7 @@ services:
     restart: always
 
   analyzer:
-    image: &analyzer_img reportportal/service-auto-analyzer:5.11.0-r1
-    container_name: reportportal-analyzer
+    image: &analyzer_img reportportal/service-auto-analyzer:${SERVICE_AUTO_ANALYZER_TAG}
     logging:
       <<: *logging
     environment:
@@ -374,7 +366,6 @@ services:
 
   analyzer-train:
     image: *analyzer_img
-    container_name: reportportal-analyzer-train
     logging:
       <<: *logging
     environment:
@@ -400,8 +391,7 @@ services:
     restart: always
 
   metrics-gatherer:
-    image: reportportal/service-metrics-gatherer:5.11.0-r1
-    container_name: reportportal-metrics-gatherer
+    image: reportportal/service-metrics-gatherer:${SERVICE_METRICS_GATHERER_TAG}
     logging:
       <<: *logging
     environment:
@@ -416,7 +406,6 @@ services:
       POSTGRES_PORT: 5432
       ALLOWED_START_TIME: "22:00"
       ALLOWED_END_TIME: "08:00"
-      # TZ: Europe/Minsk you can change a timezone like this to specify when metrics are gathered
       AMQP_URL: amqp://rabbitmq:rabbitmq@rabbitmq:5672
       AMQP_VIRTUAL_HOST: analyzer
     depends_on:
@@ -427,8 +416,7 @@ services:
     restart: always
 
   migrations:
-    image: reportportal/migrations:${VERSION}
-    container_name: reportportal-migrations
+    image: reportportal/migrations:${MIGRATIONS_TAG}
     logging:
       <<: *logging
     depends_on:
