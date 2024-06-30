@@ -1,4 +1,4 @@
-serservices:
+services:
 
   ## External dependencies
   gateway:
